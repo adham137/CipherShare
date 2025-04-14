@@ -10,7 +10,7 @@ REGISTRY_ADDRESS = Config.REGISTRY_IP
 REGISTRY_PORT = Config.REGISTRY_PORT  
 
 REGISTERED_PEERS = {}  # {username: (host, port)}
-SHARED_FILES = {}  # {file_id: {filename: , owner: }}
+SHARED_FILES = {}  # {file_id: {filename: , owner: , owner_addr: }}
 FILE_ID_COUNTER = 0
 
 
@@ -38,8 +38,10 @@ def handle_client(client_socket):
         elif command == Commands.REGISTER_FILE: 
             filename = request["filename"]
             owner = request["owner"]
+            owner_address = request["owner_address"]
             file_id = FILE_ID_COUNTER
-            SHARED_FILES[file_id] = {"filename": filename, "owner": owner}
+            SHARED_FILES[file_id] = {"filename": filename, "owner": owner, "owner_address": owner_address}
+            # print(f"********************* {filename} {owner} {owner_address}")
             FILE_ID_COUNTER += 1
             client_socket.send(json.dumps({"file_id": file_id}).encode())
             print(f"Registry: File '{filename}' (Owner: {owner}) registered with ID: {file_id}")

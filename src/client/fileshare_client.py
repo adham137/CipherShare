@@ -178,7 +178,8 @@ class FileShareClient:
         try:
             request = {"command": str(Commands.REGISTER_FILE), 
                        "filename": filename,
-                       "owner": self.username}
+                       "owner": self.username,
+                       "owner_address": self.peer_address}
             sock.sendall(json.dumps(request).encode('utf-8'))
             response_data = sock.recv(1024).decode('utf-8')
             response = json.loads(response_data)
@@ -262,24 +263,27 @@ def client_ui(client: FileShareClient):
                  print(f"Error: File not found at '{filepath}'")
                  continue
 
-            peers = client.get_peers()
-            if not peers:
-                print("No other peers available to upload to.")
-                continue
+            # peers = client.get_peers()
+            # if not peers:
+            #     print("No other peers available to upload to.")
+            #     continue
 
-            print("Choose a peer to upload to:")
-            for i, peer in enumerate(peers):
-                print(f"{i}: {peer}")
-            try:
-                 peer_index_str = input(f"Enter peer index (0 to {len(peers)-1}): ")
-                 peer_index = int(peer_index_str)
-                 if 0 <= peer_index < len(peers):
-                     selected_peer_address = peers[peer_index]
-                     client.upload_file(filepath, selected_peer_address)
-                 else:
-                     print("Invalid peer index.")
-            except ValueError:
-                 print("Invalid input. Please enter a number.")
+            # print("Choose a peer to upload to:")
+            # for i, peer in enumerate(peers):
+            #     print(f"{i}: {peer}")
+            # try:
+            #      peer_index_str = input(f"Enter peer index (0 to {len(peers)-1}): ")
+            #      peer_index = int(peer_index_str)
+            #      if 0 <= peer_index < len(peers):
+            #          selected_peer_address = peers[peer_index]
+            #          client.upload_file(filepath, selected_peer_address)
+            #      else:
+            #          print("Invalid peer index.")
+            # except ValueError:
+            #      print("Invalid input. Please enter a number.")
+
+            # Upload the file to your own peer instead
+            client.upload_file(filepath, client.peer_address)
 
         elif choice == '3':
             files = client.get_files_from_registry()
@@ -328,65 +332,15 @@ def client_ui(client: FileShareClient):
                      continue
 
 
-            # Find the peer address of the owner
-            owner_username = files[file_id_str]["owner"]
-            all_peers_incl_self = client.get_peers() # Get all peers again
+
             # Add self address if known
             if client.peer_address:
-                 # Need to get full list including self from somewhere, registry might not have it updated instantly
-                 # For simplicity, assume registry is mostly up-to-date or client knows peer address
-                 # A better approach might involve querying the registry for the owner's specific address
-                 
-                 # Let's try to find the owner in the list returned by registry
-                 owner_address = None
-                 registry_peers = client.get_peers() # Call registry again for updated list
-                 # Also check against known registered peers (requires client to store this)
-                 # We need a reliable way to map username to current address. Registry is the source.
-                 
-                 # Attempt to fetch owner address from registry based on username
-                 # This requires enhancing the registry to allow lookup by username,
-                 # or enhancing the GET_PEERS/GET_FILES response to include addresses.
-                 
-                 # **Simplification:** Assume the owner is one of the peers returned by get_peers().
-                 # This is NOT robust. A direct lookup mechanism is needed.
-                 # Let's iterate through known peers (this relies on the client having called get_peers previously)
-                 
-                 # **Revised Simplification for Phase 1:** Connect to *any* peer that *might* have the file.
-                 # Since Phase 1 doesn't enforce that only the owner serves the file,
-                 # we can *try* downloading from any known peer. This is inefficient and insecure.
-                 # A better Phase 1 might involve the registry returning the owner's address with GET_FILES.
-
-                 # **Workaround for current structure:** Find the owner's *expected* address.
-                 # This assumes the peer list from get_peers is somewhat accurate and contains the owner.
-                 # This requires the peer list from get_peers to map usernames to addresses, which it currently doesn't explicitly.
-                 # The current `get_peers` returns only list of addresses.
-                 
-                 # **Let's stick to the original logic flaw for now, assuming peer address can be found**
-                 # (This needs fixing in a real system - the registry needs to provide owner address)
-                 
-                 print(f"Client: Attempting to find address for owner '{owner_username}'...")
-                 # Problem: get_peers only returns addresses, not usernames.
-                 # We need the registry to return {username: address} or enhance GET_FILES.
-                 
-                 # **Temporary Fix:** Ask user to select peer (like upload) - less ideal but works with current limitations.
-                 peers_for_download = client.get_peers()
-                 if not peers_for_download:
-                      print("No peers available to download from.")
-                      continue
-
-                 print(f"Select a peer likely to have the file (owned by '{owner_username}'):")
-                 for i, peer in enumerate(peers_for_download):
-                      print(f"{i}: {peer}")
                  try:
-                     peer_index_str = input(f"Enter peer index (0 to {len(peers_for_download)-1}): ")
-                     peer_index = int(peer_index_str)
-                     if 0 <= peer_index < len(peers_for_download):
-                         selected_peer_address = peers_for_download[peer_index]
-                         client.download_file(file_id_str, destination_path, selected_peer_address, files[file_id_str]["filename"])
-                     else:
-                         print("Invalid peer index.")
-                 except ValueError:
-                      print("Invalid input. Please enter a number.")
+                     owner_addr = files[file_id_str]["owner_address"]
+                     client.download_file(file_id_str, destination_path, owner_addr, files[file_id_str]["filename"])
+
+                 except e:
+                      print(e)
 
             else:
                 print("Could not determine own peer address. Cannot proceed.")
