@@ -2,8 +2,21 @@
 # from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 # from cryptography.hazmat.primitives import hashes
 # from cryptography.hazmat.backends import default_backend
-# import secrets
+import secrets
+import hashlib
 
+
+def hash_password(password, salt=None):
+    if salt is None:
+        salt = secrets.token_hex(16).encode('utf-8')  # Generate a random salt
+    hashed_password = hashlib.sha256(salt + password.encode('utf-8')).hexdigest()
+    return hashed_password, salt.decode('utf-8')
+
+def verify_password(password, hashed_password, salt):
+    return hashlib.sha256(salt.encode('utf-8') + password.encode('utf-8')).hexdigest() == hashed_password
+
+def generate_session_id():
+    return secrets.token_hex(32)
 
 # def hash_password(password, salt=None):
 #     if salt is None:
