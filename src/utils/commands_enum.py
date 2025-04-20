@@ -6,7 +6,7 @@ class Commands(Enum):
     REGISTER_USER = auto()
     LOGIN_USER = auto()
     VERIFY_SESSION = auto()
-    REGISTER_PEER = auto()
+    REGISTER_PEER = auto()  # Maybe removed (currently malhash lazma)
     GET_PEERS = auto()
     REGISTER_FILE = auto()
     GET_FILES = auto()

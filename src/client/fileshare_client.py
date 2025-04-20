@@ -4,9 +4,11 @@ import sys
 import json
 import threading
 
+from colorama import Fore, Style
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from client.ui_utils import client_ui
+from src.utils.ui_utils import client_ui
 from src.utils.config import Config 
 from src.utils.commands_enum import Commands 
 
@@ -22,8 +24,9 @@ CHUNK_SIZE = Config.CHUNK_SIZE
 
 
 class FileShareClient:
-    def __init__(self, username):
-        self.username = username
+    def __init__(self):
+        self.username = None
+        self.session_id = None
         self.peer_address = None
         self.peer_listening_port = None # Store the port the peer thread is listening on
         self.shared_files = [] # Keep track of files this client's peer is sharing (IDs, names)
@@ -38,7 +41,33 @@ class FileShareClient:
             print(f"Client: Socket error connecting to {address}:{port}: {e}")
             return None
 
-    def register_with_registry(self):
+    # def register_with_registry(self):
+    #     if not self.peer_address:
+    #          print("Client: Cannot register with registry, peer address not set.")
+    #          return False
+        
+    #     sock = self._connect_socket(REGISTRY_ADDRESS, REGISTRY_PORT)
+    #     if not sock:
+    #         return False
+
+    #     try:
+    #         request = {"command": str(Commands.REGISTER_PEER),
+    #                    "username": self.username,
+    #                    "peer_address": self.peer_address} 
+    #         sock.sendall(json.dumps(request).encode('utf-8'))
+    #         response = sock.recv(1024).decode('utf-8')
+    #         if response == "OK":
+    #             print(f"Client: Registered '{self.username}' with registry successfully.")
+    #             return True
+    #         else:
+    #             print(f"Client: Registry registration failed. Response: {response}")
+    #             return False
+    #     except Exception as e:
+    #         print(f"Client: Error during registry registration: {e}")
+    #         return False
+    #     finally:
+    #         sock.close()
+    def register_user(self, username, password):
         if not self.peer_address:
              print("Client: Cannot register with registry, peer address not set.")
              return False
@@ -46,24 +75,44 @@ class FileShareClient:
         sock = self._connect_socket(REGISTRY_ADDRESS, REGISTRY_PORT)
         if not sock:
             return False
-
         try:
-            request = {"command": str(Commands.REGISTER_PEER),
-                       "username": self.username,
-                       "peer_address": self.peer_address} 
-            sock.sendall(json.dumps(request).encode('utf-8'))
-            response = sock.recv(1024).decode('utf-8')
-            if response == "OK":
-                print(f"Client: Registered '{self.username}' with registry successfully.")
+            request = {"command": "REGISTER_USER", "username": username, "password": password, "peer_address": self.peer_address}
+            sock.sendall(json.dumps(request).encode())
+            response = sock.recv(1024).decode()
+            response_data = json.loads(response)
+            if response_data["status"] == "OK":
+                print(Fore.GREEN + "Client: Registration successful!" + Style.RESET_ALL)
                 return True
             else:
-                print(f"Client: Registry registration failed. Response: {response}")
+                print(Fore.RED + f"Client: Registration failed: {response_data['message']}" + Style.RESET_ALL)
                 return False
         except Exception as e:
-            print(f"Client: Error during registry registration: {e}")
+            print(Fore.RED + f"Client: Registration error: {e}" + Style.RESET_ALL)
             return False
-        finally:
-            sock.close()
+    def login_user(self, username, password):
+        if not self.peer_address:
+             print("Client: Cannot login with registry, peer address not set.")
+             return False
+        
+        sock = self._connect_socket(REGISTRY_ADDRESS, REGISTRY_PORT)
+        if not sock:
+            return False
+        try:
+            request = {"command": "LOGIN_USER", "username": username, "password": password, "peer_address": self.peer_address}
+            sock.sendall(json.dumps(request).encode())
+            response = sock.recv(1024).decode()
+            response_data = json.loads(response)
+            if response_data["status"] == "OK":
+                self.username = username
+                self.session_id = response_data["session_id"]
+                print(Fore.GREEN + "Client: Login successful!" + Style.RESET_ALL)
+                return True
+            else:
+                print(Fore.RED + f"Client: Login failed: {response_data['message']}" + Style.RESET_ALL)
+                return False
+        except Exception as e:
+            print(Fore.RED + f"Client: Login error: {e}" + Style.RESET_ALL)
+            return False
 
     def get_peers(self):
         sock = self._connect_socket(REGISTRY_ADDRESS, REGISTRY_PORT)
@@ -87,6 +136,10 @@ class FileShareClient:
             sock.close()
 
     def upload_file(self, filepath, peer_address):
+        if not self.session_id:
+            print(Fore.RED + "Client: Not logged in. Cannot upload file." + Style.RESET_ALL)
+            return False
+        
         if not os.path.isfile(filepath):
             print(f"Client: Error - File not found at '{filepath}'")
             return False
@@ -131,45 +184,49 @@ class FileShareClient:
             sock.close()
 
     def download_file(self, file_id_str, destination_path, peer_address, filename):
-         # Ensure destination directory exists
-         os.makedirs(destination_path, exist_ok=True)
+        if not self.session_id:
+            print(Fore.RED + "Client: Not logged in. Cannot download file." + Style.RESET_ALL)
+            return False
+        
+        # Ensure destination directory exists
+        os.makedirs(destination_path, exist_ok=True)
 
-         sock = self._connect_socket(peer_address[0], peer_address[1]) 
-         if not sock:
-             return False
+        sock = self._connect_socket(peer_address[0], peer_address[1]) 
+        if not sock:
+            return False
 
-         try:
+        try:
              # Send command and file ID together, separated by newline, REVISE THIS
-             command_msg = f"{str(Commands.DOWNLOAD)}\n{file_id_str}\n"
-             sock.sendall(command_msg.encode('utf-8'))
-             print(f"Client: Requesting file ID '{file_id_str}' ({filename}) from {peer_address}")
+            command_msg = f"{str(Commands.DOWNLOAD)}\n{file_id_str}\n"
+            sock.sendall(command_msg.encode('utf-8'))
+            print(f"Client: Requesting file ID '{file_id_str}' ({filename}) from {peer_address}")
 
-             filepath = os.path.join(destination_path, filename)
-             with open(filepath, 'wb') as f:
-                 while True:
-                     chunk = sock.recv(CHUNK_SIZE)
-                     # Check for DONE signal - assumes DONE signal is sent alone and reliably
-                     if not chunk or chunk.decode(errors='ignore').strip() == str(Commands.DONE):
-                         break
-                     # Check for ERROR signal (Optional, requires peer to send it)
-                     # if chunk.decode(errors='ignore').strip() == str(Commands.ERROR):
-                     #     print(f"Client: Peer {peer_address} reported an error downloading file ID {file_id_str}.")
-                     #     # Clean up potentially incomplete file
-                     #     f.close()
-                     #     if os.path.exists(filepath): os.remove(filepath)
-                     #     return False
-                     f.write(chunk)
+            filepath = os.path.join(destination_path, filename)
+            with open(filepath, 'wb') as f:
+                while True:
+                    chunk = sock.recv(CHUNK_SIZE)
+                    # Check for DONE signal - assumes DONE signal is sent alone and reliably
+                    if not chunk or chunk.decode(errors='ignore').strip() == str(Commands.DONE):
+                        break
+                    # Check for ERROR signal (Optional, requires peer to send it)
+                    # if chunk.decode(errors='ignore').strip() == str(Commands.ERROR):
+                    #     print(f"Client: Peer {peer_address} reported an error downloading file ID {file_id_str}.")
+                    #     # Clean up potentially incomplete file
+                    #     f.close()
+                    #     if os.path.exists(filepath): os.remove(filepath)
+                    #     return False
+                    f.write(chunk)
 
-             print(f"Client: File '{filename}' (ID: {file_id_str}) downloaded to '{destination_path}'.")
-             return True
-         except Exception as e:
-             print(f"Client: Error downloading file ID {file_id_str} from {peer_address}: {e}")
-             # Clean up potentially incomplete file
-             if 'f' in locals() and not f.closed: f.close()
-             if os.path.exists(filepath): os.remove(filepath)
-             return False
-         finally:
-             sock.close()
+            print(f"Client: File '{filename}' (ID: {file_id_str}) downloaded to '{destination_path}'.")
+            return True
+        except Exception as e:
+            print(f"Client: Error downloading file ID {file_id_str} from {peer_address}: {e}")
+            # Clean up potentially incomplete file
+            if 'f' in locals() and not f.closed: f.close()
+            if os.path.exists(filepath): os.remove(filepath)
+            return False
+        finally:
+            sock.close()
 
     def register_file_with_registry(self, filename):
         sock = self._connect_socket(REGISTRY_ADDRESS, REGISTRY_PORT)
@@ -234,7 +291,8 @@ class FileShareClient:
             self.peer_address = None
             self.peer_listening_port = None
             return False
-
+    def list_shared_files(self):
+        return self.shared_files
 
 if __name__ == "__main__":
     # Ensure necessary directories exist relative to the script location
@@ -242,18 +300,14 @@ if __name__ == "__main__":
     shared_files_dir = os.path.join(script_dir, '..', Config.SHARED_FILES_DIR) # Adjust path as needed
     os.makedirs(shared_files_dir, exist_ok=True)
     
-    username = input("Enter your username: ")
-    client = FileShareClient(username)
+
+    client = FileShareClient()
     
     # Start peer thread first to get listening address
     if client.start_peer_thread():
-        # Register with registry only after peer is listening
-        if not client.register_with_registry():
-             print("!!! Warning: Failed to register with registry. Peer discovery may fail.")
-        
         # Start the UI thread
         client_ui_thread = threading.Thread(target=client_ui, args=(client,))
         client_ui_thread.start()
-        client_ui_thread.join() # Wait for UI thread to finish (on exit)
+        client_ui_thread.join() 
     else:
          print("!!! Error: Could not start peer listener. Client cannot operate.")

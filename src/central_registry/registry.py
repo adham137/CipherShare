@@ -31,11 +31,13 @@ def handle_client(client_socket):
         if command == Commands.REGISTER_USER:
             username = request["username"]
             password = request["password"]
+            peer_address = tuple(request["peer_address"])
             if username not in USER_CREDENTIALS:
                 # salt = secrets.token_hex(16)
                 # hashed_password = hashlib.sha256(salt.encode('utf-8') + password.encode('utf-8')).hexdigest()
                 hashed_password , salt= hash_password(password)
                 USER_CREDENTIALS[username] = {"hashed_password": hashed_password, "salt": salt}
+                REGISTERED_PEERS[username] = peer_address
                 client_socket.send(json.dumps({"status": "OK"}).encode())
                 print(f"Registry: User {username} registered")
             else:
@@ -44,6 +46,8 @@ def handle_client(client_socket):
         elif command == Commands.LOGIN_USER:
             username = request["username"]
             password = request["password"]
+            peer_address = tuple(request["peer_address"])
+
             if username in USER_CREDENTIALS:
                 stored_salt = USER_CREDENTIALS[username]["salt"]
                 stored_hashed_password = USER_CREDENTIALS[username]["hashed_password"]
@@ -52,6 +56,7 @@ def handle_client(client_socket):
                 if is_valid_login:
                     session_id = generate_session_id()
                     USER_SESSIONS[session_id] = username
+                    REGISTERED_PEERS[username] = peer_address
                     client_socket.send(json.dumps({"status": "OK", "session_id": session_id}).encode())
                     print(f"Registry: User {username} logged in, Session ID: {session_id}")
                 else:
