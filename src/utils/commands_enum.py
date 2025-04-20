@@ -3,6 +3,9 @@ from enum import Enum, auto
 class Commands(Enum):
     """Enum defining the commands used in the CipherShare protocol."""
     # Registry Commands
+    REGISTER_USER = auto()
+    LOGIN_USER = auto()
+    VERIFY_SESSION = auto()
     REGISTER_PEER = auto()
     GET_PEERS = auto()
     REGISTER_FILE = auto()

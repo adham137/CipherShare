@@ -1,3 +1,4 @@
+
 import socket
 import threading
 import json
@@ -5,11 +6,15 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from src.utils.config import Config 
 from src.utils.commands_enum import Commands 
+from src.utils.crypto_utils import *
 
 REGISTRY_ADDRESS = Config.REGISTRY_IP 
 REGISTRY_PORT = Config.REGISTRY_PORT  
 
 REGISTERED_PEERS = {}  # {username: (host, port)}
+USER_CREDENTIALS = {}  # {username: {hashed_password, salt}}
+USER_SESSIONS = {}  # {session_id: username}
+
 SHARED_FILES = {}  # {file_id: {filename: , owner: , owner_addr: }}
 FILE_ID_COUNTER = 0
 
@@ -23,7 +28,46 @@ def handle_client(client_socket):
         command_str = request.get("command")
         command = Commands.from_string(command_str) 
 
-        if command == Commands.REGISTER_PEER: 
+        if command == Commands.REGISTER_USER:
+            username = request["username"]
+            password = request["password"]
+            if username not in USER_CREDENTIALS:
+                # salt = secrets.token_hex(16)
+                # hashed_password = hashlib.sha256(salt.encode('utf-8') + password.encode('utf-8')).hexdigest()
+                hashed_password , salt= hash_password(password)
+                USER_CREDENTIALS[username] = {"hashed_password": hashed_password, "salt": salt}
+                client_socket.send(json.dumps({"status": "OK"}).encode())
+                print(f"Registry: User {username} registered")
+            else:
+                client_socket.send(json.dumps({"status": "ERROR", "message": "Username already exists"}).encode())
+
+        elif command == Commands.LOGIN_USER:
+            username = request["username"]
+            password = request["password"]
+            if username in USER_CREDENTIALS:
+                stored_salt = USER_CREDENTIALS[username]["salt"]
+                stored_hashed_password = USER_CREDENTIALS[username]["hashed_password"]
+                is_valid_login = verify_password(password, stored_hashed_password, stored_salt)
+
+                if is_valid_login:
+                    session_id = generate_session_id()
+                    USER_SESSIONS[session_id] = username
+                    client_socket.send(json.dumps({"status": "OK", "session_id": session_id}).encode())
+                    print(f"Registry: User {username} logged in, Session ID: {session_id}")
+                else:
+                    client_socket.send(json.dumps({"status": "ERROR", "message": "Invalid credentials"}).encode())
+            else:
+                client_socket.send(json.dumps({"status": "ERROR", "message": "Username not found"}).encode())
+
+        elif command == Commands.VERIFY_SESSION:
+            session_id = request["session_id"]
+            if session_id in USER_SESSIONS:
+                client_socket.send(json.dumps({"status": "OK", "username": USER_SESSIONS[session_id]}).encode())
+            else:
+                client_socket.send(json.dumps({"status": "ERROR", "message": "Invalid session"}).encode())
+
+
+        elif command == Commands.REGISTER_PEER: 
             username = request["username"]
             peer_address = tuple(request["peer_address"])
             REGISTERED_PEERS[username] = peer_address
