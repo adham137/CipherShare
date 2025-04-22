@@ -180,17 +180,17 @@ def client_ui(client):
                     print(Fore.BLUE + str(peer))
             elif choice == '5':
                 filepath = input(Fore.GREEN + "Enter file path to upload: " + Style.RESET_ALL)
-                peers = client.get_peers()
-                if peers:
-                    print(Fore.BLUE + "Choose a peer to upload to (index):")
-                    for i, peer in enumerate(peers):
-                        print(Fore.BLUE + f"{i}: {peer}")
-                    peer_index = int(input(Fore.GREEN + "Enter peer index: " + Style.RESET_ALL))
-                    client.upload_file(filepath, peers[peer_index])
-                    filename = os.path.basename(filepath)
-                    client.register_file_with_registry(filename)
-                else:
-                    print(Fore.RED + "No peers available to upload.")
+                # peers = client.get_peers()
+                # if peers:
+                # print(Fore.BLUE + "Choose a peer to upload to (index):")
+                # for i, peer in enumerate(peers):
+                #     print(Fore.BLUE + f"{i}: {peer}")
+                # peer_index = int(input(Fore.GREEN + "Enter peer index: " + Style.RESET_ALL))
+                client.upload_file(filepath, client.peer_address)
+                filename = os.path.basename(filepath)
+                client.register_file_with_registry(filename)
+                # else:
+                #     print(Fore.RED + "No peers available to upload.")
             elif choice == '6':
                 files = client.get_files_from_registry()
                 if files:
@@ -200,14 +200,19 @@ def client_ui(client):
                     file_id = input(Fore.GREEN + "Enter file ID to download: " + Style.RESET_ALL)
                     destination_path = input(Fore.GREEN + "Enter destination path: " + Style.RESET_ALL)
                     peers = client.get_peers()
-                    owner_username = files[file_id]["owner"]
-                    peer_address = ()
-                    for p in peers:
-                        if p[0] == '127.0.0.1':
-                            peer_address = tuple(p)
-                    client.download_file(file_id, destination_path, peer_address, files[file_id]["filename"])
+                    if client.peer_address:
+                         try:
+                             owner_addr = files[file_id]["owner_address"]
+                             client.download_file(file_id, destination_path, owner_addr, files[file_id]["filename"])
+
+                         except e:
+                              print(Fore.RED + e)
+
+                    else:
+                        print(Fore.RED + "Could not determine own peer address. Cannot proceed.")
                 else:
                     print(Fore.RED + "No files available to download.")
+
             elif choice == '7':
                 shared_files = client.list_shared_files()
                 print(Fore.BLUE + "Shared Files:", shared_files)
