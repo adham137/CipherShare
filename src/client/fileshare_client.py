@@ -27,6 +27,7 @@ class FileShareClient:
     def __init__(self):
         self.username = None
         self.session_id = None
+        self.key = None
         self.peer_address = None
         self.peer_listening_port = None # Store the port the peer thread is listening on
         self.shared_files = [] # Keep track of files this client's peer is sharing (IDs, names)
@@ -103,8 +104,11 @@ class FileShareClient:
             response = sock.recv(1024).decode()
             response_data = json.loads(response)
             if response_data["status"] == "OK":
+                # recieve your sessionId and key
                 self.username = username
                 self.session_id = response_data["session_id"]
+                self.key = response_data["key"]
+                print(f"Recieved sessionId: ({self.session_id})\nRecieved key: ({self.key})")
                 print(Fore.GREEN + "Client: Login successful!" + Style.RESET_ALL)
                 return True
             else:
@@ -147,7 +151,7 @@ class FileShareClient:
         filename = os.path.basename(filepath)
         sock = self._connect_socket(peer_address[0], peer_address[1]) # Use tuple elements
         if not sock:
-            return False
+            return 
 
         try:
             # Send command and filename together, separated by newline, REVISE THIS
