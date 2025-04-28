@@ -188,7 +188,7 @@ def client_ui(client):
                 # peer_index = int(input(Fore.GREEN + "Enter peer index: " + Style.RESET_ALL))
                 client.upload_file(filepath, client.peer_address)
                 filename = os.path.basename(filepath)
-                client.register_file_with_registry(filename)
+                # client.register_file_with_registry(filename)
                 # else:
                 #     print(Fore.RED + "No peers available to upload.")
             elif choice == '6':

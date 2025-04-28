@@ -88,8 +88,9 @@ def handle_client(client_socket):
             filename = request["filename"]
             owner = request["owner"]
             owner_address = request["owner_address"]
+            file_hash     = request.get("file_hash")
             file_id = FILE_ID_COUNTER
-            SHARED_FILES[file_id] = {"filename": filename, "owner": owner, "owner_address": owner_address}
+            SHARED_FILES[file_id] = {"filename": filename, "owner": owner, "owner_address": owner_address, "file_hash": file_hash}
             # print(f"********************* {filename} {owner} {owner_address}")
             FILE_ID_COUNTER += 1
             client_socket.send(json.dumps({"file_id": file_id}).encode())

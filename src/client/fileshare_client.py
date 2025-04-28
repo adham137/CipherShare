@@ -155,22 +155,26 @@ class FileShareClient:
             sock.sendall(command_msg.encode('utf-8'))
             print(f"Client: Sending command '{Commands.UPLOAD}' and filename '{filename}' to {peer_address}")
 
-            # Send the file in chunks
+            # Compute integrity hash over plaintext
+            file_hash = crypto_utils.compute_file_hash(filepath)
+
+            # Encrypt entire file
             with open(filepath, 'rb') as f:
-                while True:
-                    chunk = f.read(CHUNK_SIZE)
-                    if not chunk:
-                        break
-                    sock.sendall(chunk) 
+                plaintext = f.read()
+            ciphertext = crypto_utils.encrypt_data(plaintext)
+
+            # Send encrypted bytes in chunks
+            for i in range(0, len(ciphertext), CHUNK_SIZE):
+                sock.sendall(ciphertext[i:i+CHUNK_SIZE]) 
             
             # Send DONE signal separately
             sock.sendall(str(Commands.DONE).encode('utf-8')) 
-            print(f"Client: File '{filename}' uploaded to peer {peer_address}.")
+            print(f"Client: Encrypted File '{filename}' uploaded to peer {peer_address}.")
             
             # Register file with registry AFTER successful upload
-            file_id = self.register_file_with_registry(filename)
+            file_id = self.register_file_with_registry(filename, file_hash)
             if file_id is not None:
-                 print(f"Client: File '{filename}' registered with registry (ID: {file_id}).")
+                 print(f"Client: File '{filename}' registered with registry (ID: {file_id}, hash {file_hash}).")
                  # Optionally add to local list: self.shared_files.append({'id': file_id, 'name': filename})
                  return True
             else:
@@ -188,6 +192,11 @@ class FileShareClient:
             print(Fore.RED + "Client: Not logged in. Cannot download file." + Style.RESET_ALL)
             return False
         
+        # Fetch expected hash from registry
+        all_files = self.get_files_from_registry()
+        meta = all_files.get(file_id_str) or {}
+        expected_hash = meta.get("file_hash")
+        
         # Ensure destination directory exists
         os.makedirs(destination_path, exist_ok=True)
 
@@ -202,12 +211,26 @@ class FileShareClient:
             print(f"Client: Requesting file ID '{file_id_str}' ({filename}) from {peer_address}")
 
             filepath = os.path.join(destination_path, filename)
+
+            # Receive all encrypted data
+            encrypted = b''
+            while True:
+                chunk = sock.recv(CHUNK_SIZE)
+                if not chunk or chunk.decode(errors='ignore').strip() == str(Commands.DONE):
+                    break
+                encrypted += chunk
+
+            # Decrypt
+            plaintext = crypto_utils.decrypt_data(encrypted)
+
             with open(filepath, 'wb') as f:
-                while True:
-                    chunk = sock.recv(CHUNK_SIZE)
-                    # Check for DONE signal - assumes DONE signal is sent alone and reliably
-                    if not chunk or chunk.decode(errors='ignore').strip() == str(Commands.DONE):
-                        break
+                    f.write(plaintext)
+            print(Fore.GREEN + f"Client: Decrypted file saved to {filepath}" + Style.RESET_ALL)
+                # while True:
+                #     chunk = sock.recv(CHUNK_SIZE)
+                #     # Check for DONE signal - assumes DONE signal is sent alone and reliably
+                #     if not chunk or chunk.decode(errors='ignore').strip() == str(Commands.DONE):
+                #         break
                     # Check for ERROR signal (Optional, requires peer to send it)
                     # if chunk.decode(errors='ignore').strip() == str(Commands.ERROR):
                     #     print(f"Client: Peer {peer_address} reported an error downloading file ID {file_id_str}.")
@@ -215,7 +238,14 @@ class FileShareClient:
                     #     f.close()
                     #     if os.path.exists(filepath): os.remove(filepath)
                     #     return False
-                    f.write(chunk)
+                    # f.write(chunk)
+             # 5) Verify integrity
+            actual_hash = crypto_utils.compute_hash(plaintext)
+            if expected_hash and actual_hash == expected_hash:
+                print(Fore.GREEN + "Client: Integrity check passed ✔" + Style.RESET_ALL)
+            else:
+                print(Fore.RED + f"Client: WARNING—integrity check failed (expected {expected_hash}, got {actual_hash})" + Style.RESET_ALL)
+                
 
             print(f"Client: File '{filename}' (ID: {file_id_str}) downloaded to '{destination_path}'.")
             return True
@@ -228,7 +258,7 @@ class FileShareClient:
         finally:
             sock.close()
 
-    def register_file_with_registry(self, filename):
+    def register_file_with_registry(self, filename, file_hash):
         sock = self._connect_socket(REGISTRY_ADDRESS, REGISTRY_PORT)
         if not sock:
             return None
@@ -237,7 +267,8 @@ class FileShareClient:
             request = {"command": str(Commands.REGISTER_FILE), 
                        "filename": filename,
                        "owner": self.username,
-                       "owner_address": self.peer_address}
+                       "owner_address": self.peer_address,
+                       "file_hash":     file_hash}
             sock.sendall(json.dumps(request).encode('utf-8'))
             response_data = sock.recv(1024).decode('utf-8')
             response = json.loads(response_data)
