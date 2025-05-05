@@ -205,8 +205,9 @@ def client_ui(client):
                              owner_addr = files[file_id]["owner_address"]
                              filename = files[file_id]["filename"]
                              hash = files[file_id]["file_hash"]
+                             key = client.request_key(file_id)
                             #  print(f"The file hash is: ({hash})")
-                             client.download_file(file_id, destination_path, owner_addr, filename, hash)
+                             client.download_file(file_id, destination_path, owner_addr, filename, hash, key)
 
                          except Exception as e:
                               print(Fore.RED + e)

@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
 
-DEFAULT_KEY = hashlib.sha256(b'CipherShareSymmetricKey').digest()
+# DEFAULT_KEY = hashlib.sha256(b'CipherShareSymmetricKey').digest()
 
 def hash_password_SHA256(password, salt=None):
     if salt is None:
@@ -22,6 +22,9 @@ def verify_password_256(password, hashed_password, salt):
 
 def generate_session_id():
     return secrets.token_hex(32)
+
+def generate_key_from_hash(hash):
+    return hashlib.sha256(hash.encode('utf-8')).digest()
 
 def hash_password_argon2(password, salt=None):
     
@@ -70,19 +73,21 @@ def derive_key_from_password(password, salt):
     # print(f"Function (derive_key_from_password):\nis (key) bytes ({isinstance(key, (bytes, bytearray))})\n")
     return key
 
-def encrypt_data(data: bytes, key: bytes = DEFAULT_KEY) -> bytes:
+def encrypt_data(data: bytes, hash: bytes ) -> bytes:
     """
     AES-CBC encrypt `data`, return IV||ciphertext.
     """
+    key = generate_key_from_hash(hash)
     iv = secrets.token_bytes(AES.block_size)
     cipher = AES.new(key, AES.MODE_CBC, iv)
     ct = cipher.encrypt(pad(data, AES.block_size))
     return iv + ct
 
-def decrypt_data(iv_and_ct: bytes, key: bytes = DEFAULT_KEY) -> bytes:
+def decrypt_data(iv_and_ct: bytes, hash: bytes ) -> bytes:
     """
     Split out IV, AES-CBC decrypt ciphertext, remove PKCS7 padding.
     """
+    key = generate_key_from_hash(hash)
     iv = iv_and_ct[:AES.block_size]
     ct = iv_and_ct[AES.block_size:]
     cipher = AES.new(key, AES.MODE_CBC, iv)

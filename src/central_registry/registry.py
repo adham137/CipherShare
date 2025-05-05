@@ -103,7 +103,15 @@ def handle_client(client_socket):
         elif command == Commands.GET_FILES: 
             client_socket.send(json.dumps(SHARED_FILES).encode())
             print(f"Registry: Sent file list: {SHARED_FILES}")
-        
+
+        elif command == Commands.REQUEST_KEY: 
+            print("SOME ONE IS TRYING TO REQUEST A KEY")
+            file_id = int(request["file_id"])
+            username = SHARED_FILES[file_id]["owner"]
+            key = USER_CREDENTIALS[username]["key"]
+            print(f"Register: The key is ({key})")
+            client_socket.send(json.dumps({"status": "OK", "key": key}).encode())
+            print(f"Registry: Sent key for file with id: {file_id}")
         else:
              print(f"Registry: Received unknown command: {command_str}")
              # Optionally send an error response

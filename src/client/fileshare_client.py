@@ -139,7 +139,28 @@ class FileShareClient:
             return []
         finally:
             sock.close()
-
+    def request_key(self, file_id):
+        key=""
+        sock = self._connect_socket(REGISTRY_ADDRESS, REGISTRY_PORT)
+        if not sock:
+            return None
+        try:
+            request = {"command": "REQUEST_KEY", "file_id": file_id}
+            sock.sendall(json.dumps(request).encode())
+            response = sock.recv(1024).decode()
+            response_data = json.loads(response)
+            if response_data["status"] == "OK":
+                # recieve the key for the file
+                key = response_data["key"]
+                print(f"Recieved key: ({key})")
+                return key
+            else:
+                print(Fore.RED + f"Client: Access for the file is prohibted: {response_data['message']}" + Style.RESET_ALL)
+                return None
+        except Exception as e:
+            print(Fore.RED + f"Client: error while trying to retrieve the key: {e}" + Style.RESET_ALL)
+            return None
+        
     def upload_file(self, filepath, peer_address):
         if not self.session_id:
             print(Fore.RED + "Client: Not logged in. Cannot upload file." + Style.RESET_ALL)
@@ -166,7 +187,7 @@ class FileShareClient:
             # Encrypt entire file
             with open(filepath, 'rb') as f:
                 plaintext = f.read()
-            ciphertext = crypto_utils.encrypt_data(plaintext)
+            ciphertext = crypto_utils.encrypt_data(plaintext, self.key)
             # assert len(ciphertext) % AES.block_size == 0, "Blob length must be multiple of 16"
 
             # Send encrypted bytes in chunks
@@ -193,7 +214,7 @@ class FileShareClient:
         finally:
             sock.close()
 
-    def download_file(self, file_id_str, destination_path, peer_address, filename, expected_hash):
+    def download_file(self, file_id_str, destination_path, peer_address, filename, expected_hash, key):
         if not self.session_id:
             print(Fore.RED + "Client: Not logged in. Cannot download file." + Style.RESET_ALL)
             return False
@@ -229,7 +250,7 @@ class FileShareClient:
             # Decrypt
             print("We will begin decrypting now")
 
-            plaintext = crypto_utils.decrypt_data(encrypted)
+            plaintext = crypto_utils.decrypt_data(encrypted, key)
 
             with open(filepath, 'wb') as f:
                     f.write(plaintext)

@@ -10,6 +10,7 @@ class Commands(Enum):
     GET_PEERS = auto()
     REGISTER_FILE = auto()
     GET_FILES = auto()
+    REQUEST_KEY = auto()
 
     # Client-to-Peer Commands
     UPLOAD = auto()
