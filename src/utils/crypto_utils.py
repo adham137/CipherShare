@@ -4,7 +4,12 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 import secrets
 import hashlib
+import secrets
+import hashlib
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
 
+DEFAULT_KEY = hashlib.sha256(b'CipherShareSymmetricKey').digest()
 
 def hash_password_SHA256(password, salt=None):
     if salt is None:
@@ -64,3 +69,38 @@ def derive_key_from_password(password, salt):
     key = kdf.derive(password.encode('utf-8')).hex()
     print(f"Function (derive_key_from_password):\nis (key) bytes ({isinstance(key, (bytes, bytearray))})\n")
     return key
+
+def encrypt_data(data: bytes, key: bytes = DEFAULT_KEY) -> bytes:
+    """
+    AES-CBC encrypt `data`, return IV||ciphertext.
+    """
+    iv = secrets.token_bytes(AES.block_size)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    ct = cipher.encrypt(pad(data, AES.block_size))
+    return iv + ct
+
+def decrypt_data(iv_and_ct: bytes, key: bytes = DEFAULT_KEY) -> bytes:
+    """
+    Split out IV, AES-CBC decrypt ciphertext, remove PKCS7 padding.
+    """
+    iv = iv_and_ct[:AES.block_size]
+    ct = iv_and_ct[AES.block_size:]
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    pt = unpad(cipher.decrypt(ct), AES.block_size)
+    return pt
+
+def compute_hash(data: bytes) -> str:
+    """
+    SHA-256 over in-memory bytes.
+    """
+    return hashlib.sha256(data).hexdigest()
+
+def compute_file_hash(filepath: str) -> str:
+    """
+    SHA-256 over a file on disk (streaming).
+    """
+    h = hashlib.sha256()
+    with open(filepath, 'rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            h.update(chunk)
+    return h.hexdigest()
