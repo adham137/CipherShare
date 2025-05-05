@@ -22,8 +22,8 @@ class UploadStrategy(CommandStrategy):
                 while True:
                     chunk = client_socket.recv(Config.CHUNK_SIZE)
                     # Check for DONE signal
-                    if not chunk or chunk.decode(errors='ignore').strip() == str(Commands.DONE):
-                         break
+                    if not chunk or chunk.decode('utf-8', errors='ignore').strip() == str(Commands.DONE):
+                        break
                     f.write(chunk)
             print(f"Peer (Upload): File '{filename}' received successfully.")
         except Exception as e:

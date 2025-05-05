@@ -5,6 +5,7 @@ import json
 import threading
 
 from colorama import Fore, Style
+from Crypto.Cipher import AES
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
@@ -166,13 +167,14 @@ class FileShareClient:
             with open(filepath, 'rb') as f:
                 plaintext = f.read()
             ciphertext = crypto_utils.encrypt_data(plaintext)
+            # assert len(ciphertext) % AES.block_size == 0, "Blob length must be multiple of 16"
 
             # Send encrypted bytes in chunks
             for i in range(0, len(ciphertext), CHUNK_SIZE):
                 sock.sendall(ciphertext[i:i+CHUNK_SIZE]) 
             
             # Send DONE signal separately
-            sock.sendall(str(Commands.DONE).encode('utf-8')) 
+            # sock.sendall(str(Commands.DONE).encode('utf-8')) 
             print(f"Client: Encrypted File '{filename}' uploaded to peer {peer_address}.")
             
             # Register file with registry AFTER successful upload
@@ -226,6 +228,7 @@ class FileShareClient:
 
             # Decrypt
             print("We will begin decrypting now")
+
             plaintext = crypto_utils.decrypt_data(encrypted)
 
             with open(filepath, 'wb') as f:

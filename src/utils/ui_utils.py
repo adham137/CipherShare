@@ -208,7 +208,7 @@ def client_ui(client):
                             #  print(f"The file hash is: ({hash})")
                              client.download_file(file_id, destination_path, owner_addr, filename, hash)
 
-                         except e:
+                         except Exception as e:
                               print(Fore.RED + e)
 
                     else:
