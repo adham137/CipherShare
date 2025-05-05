@@ -4,8 +4,6 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 import secrets
 import hashlib
-import secrets
-import hashlib
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
@@ -27,7 +25,7 @@ def hash_password_argon2(password, salt=None):
     
     if salt is None:
         salt = secrets.token_hex(16).encode('utf-8')
-    print(f"Function (hash_password_argon2):\nis (salt) bytes ({isinstance(salt, (bytes, bytearray))})\nis (passwords) bytes ({isinstance(password, (bytes, bytearray))})\n")
+    # print(f"Function (hash_password_argon2):\nis (salt) bytes ({isinstance(salt, (bytes, bytearray))})\nis (passwords) bytes ({isinstance(password, (bytes, bytearray))})\n")
     argon2 = Argon2id(
         salt=salt,
         length=32,
@@ -37,11 +35,11 @@ def hash_password_argon2(password, salt=None):
     )
 
     key = argon2.derive(password.encode('utf-8')).hex()
-    # print(f"Function (hash_password_argon2):\nis (key) bytes ({isinstance(key, (bytes, bytearray))})\n")
+    # # print(f"Function (hash_password_argon2):\nis (key) bytes ({isinstance(key, (bytes, bytearray))})\n")
     return key, salt.decode('utf-8')
 
 def verify_password_argon2(password, hashed_password_hex, salt):
-    print(f"Function (verify_password_argon2):\nis (salt) bytes ({isinstance(salt, (bytes, bytearray))})\nis (password) bytes ({isinstance(password, (bytes, bytearray))})\nis (hashed_password_hex) bytes ({isinstance(hashed_password_hex, (bytes, bytearray))})\n")
+    # print(f"Function (verify_password_argon2):\nis (salt) bytes ({isinstance(salt, (bytes, bytearray))})\nis (password) bytes ({isinstance(password, (bytes, bytearray))})\nis (hashed_password_hex) bytes ({isinstance(hashed_password_hex, (bytes, bytearray))})\n")
     argon2 = Argon2id(
         salt=salt.encode('utf-8'),
         length=32,
@@ -54,11 +52,11 @@ def verify_password_argon2(password, hashed_password_hex, salt):
         argon2.verify(password.encode("utf-8"), hashed_password_bytes) #argon2.verify_hash(hashed_password, password.encode('utf-8'))
         return True
     except Exception as e:
-        print(f"Verification Exception: {e}")
+        # print(f"Verification Exception: {e}")
         return False
 
 def derive_key_from_password(password, salt):
-    print(f"Function (derive_key_from_password):\nis (salt) bytes ({isinstance(salt, (bytes, bytearray))})\nis (password) bytes ({isinstance(password, (bytes, bytearray))})\n")
+    # print(f"Function (derive_key_from_password):\nis (salt) bytes ({isinstance(salt, (bytes, bytearray))})\nis (password) bytes ({isinstance(password, (bytes, bytearray))})\n")
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
@@ -67,7 +65,7 @@ def derive_key_from_password(password, salt):
         backend=default_backend()
     )
     key = kdf.derive(password.encode('utf-8')).hex()
-    print(f"Function (derive_key_from_password):\nis (key) bytes ({isinstance(key, (bytes, bytearray))})\n")
+    # print(f"Function (derive_key_from_password):\nis (key) bytes ({isinstance(key, (bytes, bytearray))})\n")
     return key
 
 def encrypt_data(data: bytes, key: bytes = DEFAULT_KEY) -> bytes:
@@ -87,6 +85,7 @@ def decrypt_data(iv_and_ct: bytes, key: bytes = DEFAULT_KEY) -> bytes:
     ct = iv_and_ct[AES.block_size:]
     cipher = AES.new(key, AES.MODE_CBC, iv)
     pt = unpad(cipher.decrypt(ct), AES.block_size)
+    print("File decrypted successfully")
     return pt
 
 def compute_hash(data: bytes) -> str:

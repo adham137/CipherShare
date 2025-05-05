@@ -203,7 +203,10 @@ def client_ui(client):
                     if client.peer_address:
                          try:
                              owner_addr = files[file_id]["owner_address"]
-                             client.download_file(file_id, destination_path, owner_addr, files[file_id]["filename"])
+                             filename = files[file_id]["filename"]
+                             hash = files[file_id]["file_hash"]
+                            #  print(f"The file hash is: ({hash})")
+                             client.download_file(file_id, destination_path, owner_addr, filename, hash)
 
                          except e:
                               print(Fore.RED + e)

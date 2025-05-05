@@ -191,15 +191,15 @@ class FileShareClient:
         finally:
             sock.close()
 
-    def download_file(self, file_id_str, destination_path, peer_address, filename):
+    def download_file(self, file_id_str, destination_path, peer_address, filename, expected_hash):
         if not self.session_id:
             print(Fore.RED + "Client: Not logged in. Cannot download file." + Style.RESET_ALL)
             return False
         
-        # Fetch expected hash from registry
-        all_files = self.get_files_from_registry()
-        meta = all_files.get(file_id_str) or {}
-        expected_hash = meta.get("file_hash")
+        # # Fetch expected hash from registry
+        # all_files = self.get_files_from_registry()
+        # meta = all_files.get(file_id_str) or {}
+        # expected_hash = meta.get("file_hash")
         
         # Ensure destination directory exists
         os.makedirs(destination_path, exist_ok=True)
@@ -225,24 +225,13 @@ class FileShareClient:
                 encrypted += chunk
 
             # Decrypt
+            print("We will begin decrypting now")
             plaintext = crypto_utils.decrypt_data(encrypted)
 
             with open(filepath, 'wb') as f:
                     f.write(plaintext)
             print(Fore.GREEN + f"Client: Decrypted file saved to {filepath}" + Style.RESET_ALL)
-                # while True:
-                #     chunk = sock.recv(CHUNK_SIZE)
-                #     # Check for DONE signal - assumes DONE signal is sent alone and reliably
-                #     if not chunk or chunk.decode(errors='ignore').strip() == str(Commands.DONE):
-                #         break
-                    # Check for ERROR signal (Optional, requires peer to send it)
-                    # if chunk.decode(errors='ignore').strip() == str(Commands.ERROR):
-                    #     print(f"Client: Peer {peer_address} reported an error downloading file ID {file_id_str}.")
-                    #     # Clean up potentially incomplete file
-                    #     f.close()
-                    #     if os.path.exists(filepath): os.remove(filepath)
-                    #     return False
-                    # f.write(chunk)
+
              # 5) Verify integrity
             actual_hash = crypto_utils.compute_hash(plaintext)
             if expected_hash and actual_hash == expected_hash:
