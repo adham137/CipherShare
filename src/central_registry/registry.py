@@ -136,10 +136,17 @@ def handle_client(client_socket):
             print(f"Registry: File '{filename}' (Owner: {username}) registered with ID: {file_id}")
 
         elif command == Commands.GET_FILES:
-            # return all files for now, client can filter or check access before download
-            # could be modified to filter based on 'allowed_users' for the requesting user
-            client_socket.send(json.dumps(SHARED_FILES).encode())
-            print(f"Registry: Sent file list: {SHARED_FILES}")
+            # filter files to only include those the requesting user is allowed to access
+            accessible_files = {
+                file_id: file_info
+                for file_id, file_info in SHARED_FILES.items()
+                if username in file_info.get("allowed_users", [])
+            }
+
+            client_socket.send(json.dumps(accessible_files).encode())
+            print(f"Registry: Sent accessible file list for user '{username}': {accessible_files}")
+
+
 
         elif command == Commands.REQUEST_KEY:
             file_id_str = request.get("file_id")
