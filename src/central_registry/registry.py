@@ -2,6 +2,7 @@ import socket
 import threading
 import json
 import sys, os
+import atexit # for saving data on exit
 # Add parent directory to sys.path to import modules from src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from src.utils.config import Config
@@ -10,15 +11,60 @@ from src.utils.crypto_utils import *
 
 REGISTRY_ADDRESS = Config.REGISTRY_IP
 REGISTRY_PORT = Config.REGISTRY_PORT
+REGISTRY_DATA_FILE = Config.REGISTRY_DATA_FILE
 
-REGISTERED_PEERS = {}  # {username: (host, port)}
-USER_CREDENTIALS = {}  # {username: {hashed_password, salt, key}}
-USER_SESSIONS = {}  # {session_id: username}
-
-# new SHARED_FILES structure to include 'allowed_users'
-# {file_id: {filename: , owner: , owner_addr: , file_hash: , allowed_users: []}}
-SHARED_FILES = {}
+REGISTERED_PEERS = {}   # {username: (host, port)}
+USER_CREDENTIALS = {}   # {username: {hashed_password, salt, key}}
+USER_SESSIONS = {}      # {session_id: username}            NB: sessions are not persisted
+SHARED_FILES = {}       # {file_id: {filename: , owner: , owner_addr: , file_hash: , allowed_users: []}}
 FILE_ID_COUNTER = 0
+
+def load_registry_data():
+    """Loads registry data from the persistence file on startup."""
+    global REGISTERED_PEERS, USER_CREDENTIALS, SHARED_FILES, FILE_ID_COUNTER
+    try:
+        if os.path.exists(REGISTRY_DATA_FILE):
+            with open(REGISTRY_DATA_FILE, 'r') as f:
+                data = json.load(f)
+                REGISTERED_PEERS = data.get("registered_peers", {})
+                USER_CREDENTIALS = data.get("user_credentials", {})
+                SHARED_FILES = data.get("shared_files", {})
+                FILE_ID_COUNTER = data.get("file_id_counter", 0)
+            print(f"Registry: Data loaded successfully from {REGISTRY_DATA_FILE}")
+        else:
+            print(f"Registry: No data file found at {REGISTRY_DATA_FILE}. Starting with empty data.")
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Registry Error loading data: {e}. Starting with empty data.")
+        # Initialize with empty data if loading fails
+        REGISTERED_PEERS = {}
+        USER_CREDENTIALS = {}
+        SHARED_FILES = {}
+        FILE_ID_COUNTER = 0
+    except Exception as e:
+        print(f"Registry unexpected error during data loading: {e}. Starting with empty data.")
+        # Initialize with empty data if loading fails
+        REGISTERED_PEERS = {}
+        USER_CREDENTIALS = {}
+        SHARED_FILES = {}
+        FILE_ID_COUNTER = 0
+
+def save_registry_data():
+    """Saves registry data to the persistence file."""
+    data = {
+        "registered_peers": REGISTERED_PEERS,
+        "user_credentials": USER_CREDENTIALS,
+        "shared_files": SHARED_FILES,
+        "file_id_counter": FILE_ID_COUNTER
+    }
+    try:
+        with open(REGISTRY_DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+        print(f"Registry: Data saved successfully to {REGISTRY_DATA_FILE}")
+    except IOError as e:
+        print(f"Registry Error saving data to {REGISTRY_DATA_FILE}: {e}")
+    except Exception as e:
+        print(f"Registry unexpected error during data saving: {e}")
+
 
 
 def handle_client(client_socket):
@@ -60,6 +106,7 @@ def handle_client(client_socket):
                 REGISTERED_PEERS[username_reg] = peer_address
                 client_socket.send(json.dumps({"status": "OK"}).encode())
                 print(f"Registry: User {username_reg} registered")
+                save_registry_data() # save data after login 
             else:
                 client_socket.send(json.dumps({"status": "ERROR", "message": "Username already exists"}).encode())
 
@@ -81,6 +128,7 @@ def handle_client(client_socket):
                     REGISTERED_PEERS[username_login] = peer_address # Update peer address on login
                     client_socket.send(json.dumps({"status": "OK", "session_id": session_id, "key": stored_key}).encode())
                     print(f"Registry: User {username_login} logged in, Session ID: {session_id}")
+                    save_registry_data()
                 else:
                     client_socket.send(json.dumps({"status": "ERROR", "message": "Invalid credentials"}).encode())
             else:
@@ -134,6 +182,7 @@ def handle_client(client_socket):
             FILE_ID_COUNTER += 1
             client_socket.send(json.dumps({"status": "OK", "file_id": file_id}).encode())
             print(f"Registry: File '{filename}' (Owner: {username}) registered with ID: {file_id}")
+            save_registry_data() 
 
         elif command == Commands.GET_FILES:
             # filter files to only include those the requesting user is allowed to access
@@ -206,6 +255,7 @@ def handle_client(client_socket):
                             file_info.setdefault("allowed_users", []).append(target_username)
                             client_socket.send(json.dumps({"status": "OK", "message": f"File shared with {target_username}"}).encode())
                             print(f"Registry: User '{username}' shared file ID {file_id} with '{target_username}'.")
+                            save_registry_data() 
                         else:
                             client_socket.send(json.dumps({"status": "ERROR", "message": f"File already shared with {target_username}"}).encode())
                             print(f"Registry: File ID {file_id} already shared with '{target_username}'.")
@@ -247,6 +297,7 @@ def handle_client(client_socket):
                         file_info["allowed_users"].remove(target_username)
                         client_socket.send(json.dumps({"status": "OK", "message": f"Access revoked for {target_username}"}).encode())
                         print(f"Registry: User '{username}' revoked access for '{target_username}' to file ID {file_id}.")
+                        save_registry_data() 
                     else:
                         client_socket.send(json.dumps({"status": "ERROR", "message": f"User {target_username} does not have access to this file"}).encode())
                         print(f"Registry: Revoke failed - User '{target_username}' does not have access to file ID {file_id}.")
@@ -305,9 +356,13 @@ def start_registry_server(address=REGISTRY_ADDRESS, port=REGISTRY_PORT):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
+        load_registry_data()
         server_socket.bind((address, port))
         server_socket.listen(5)
         print(f"Registry server listening on {address}:{port}")
+
+        # register save_registry_data to be called on exit
+        atexit.register(save_registry_data)
 
         while True:
             client_sock, addr = server_socket.accept()
@@ -318,6 +373,7 @@ def start_registry_server(address=REGISTRY_ADDRESS, port=REGISTRY_PORT):
     except KeyboardInterrupt:
          print("\nRegistry: Shutting down...")
     finally:
+         save_registry_data()
          server_socket.close()
          print("Registry server shut down.")
 

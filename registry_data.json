@@ -1,0 +1,17 @@
+{
+    "registered_peers": {
+        "A1": [
+            "127.0.0.1",
+            58238
+        ]
+    },
+    "user_credentials": {
+        "A1": {
+            "hashed_password": "f47e89030dbd7c7261882a048fd50638804b54af4f05401d471c06350e252a8e",
+            "salt": "0e9c5ee68fc1c17f1db2b75135b87e8b",
+            "key": "84da6d8d35b0d387981f8f2f45f9a5b7c5f8ff44973a21f99829c25abdb0762c"
+        }
+    },
+    "shared_files": {},
+    "file_id_counter": 0
+}
