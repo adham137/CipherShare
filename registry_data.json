@@ -2,29 +2,25 @@
     "registered_peers": {
         "moamen": [
             "127.0.0.1",
-            5000
+            50003
+        ],
+        "adham": [
+            "127.0.0.1",
+            50038
         ]
     },
     "user_credentials": {
         "moamen": {
-            "hashed_password": "0d26dc993e8e37fbf4cbc6c9a67dac00d5a59c2b72eba72502a7a377f428f548",
-            "salt": "d09919c74400d58697c7692d0d5c4eee",
-            "key": "d8023b9113d18205efe5381b7f31f4b478d83ee96932fe6d2201616065b44eaa"
+            "hashed_password": "022ef1c025999700aca56ebcee42746a1574c300fccb7b3175bbada29ed021f2",
+            "salt": "fc3636a332ce65f75e5f519ef0d2a1f6",
+            "key": "daa57a40002c287467540612dbebe1091a0ba65530d5c0322d88b38a81ead7ad"
+        },
+        "adham": {
+            "hashed_password": "026e78eede0d885b2524d76391880048643dc9d02478b1e6ca56cc8325628de1",
+            "salt": "2e4829650f57d21da759d1da38b1c7e7",
+            "key": "d0152fee1adcfcb63f75b8784d9d33a29e1b018642c08764fab7f40f146b7d7b"
         }
     },
-    "shared_files": {
-        "0": {
-            "filename": "test.txt",
-            "owner": "moamen",
-            "owner_address": [
-                "127.0.0.1",
-                5000
-            ],
-            "file_hash": "abc123",
-            "allowed_users": [
-                "moamen"
-            ]
-        }
-    },
-    "file_id_counter": 1
+    "shared_files": {},
+    "file_id_counter": 0
 }

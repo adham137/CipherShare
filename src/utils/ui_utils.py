@@ -22,11 +22,9 @@ def print_centered_banner(text, subtitle=None, style="bold cyan", subtitle_style
         console.print(subtitle.center(term_width), style=subtitle_style)
 
 
-def client_ui(client, clear_screen=True):
+def client_ui(client):
     while True:
-        if clear_screen:
-            os.system("clear")
-
+        os.system("clear")
         if client.username:
             print_centered_banner("CipherShare", subtitle=f"Welcome, {client.username} 👋")
         else:
@@ -34,11 +32,11 @@ def client_ui(client, clear_screen=True):
 
         if not client.username:
             menu_text = Text()
-            menu_text.append(" Register – Create a new account\n")
-            menu_text.append(" Login – Access your account\n")
-            menu_text.append(" Exit – Quit the client")
+            menu_text.append(" 1️⃣  Register – Create a new account\n")
+            menu_text.append(" 2️⃣  Login – Access your account\n")
+            menu_text.append(" 3️⃣  Exit – Quit the client")
             console.print(Panel(menu_text, title="Main Menu", border_style="magenta", box=box.ROUNDED))
-            choice = Prompt.ask("[green]Select an option[/] [1/2/3]", choices=["1", "2", "3"], default="1")
+            choice = Prompt.ask("[green]Select an option[/]", choices=["1", "2", "3"], default="1")
 
             if choice == "1":
                 username = Prompt.ask("[green]Enter username[/]")
@@ -49,16 +47,14 @@ def client_ui(client, clear_screen=True):
                 username = Prompt.ask("[green]Enter username[/]")
                 password = Prompt.ask("[green]Enter password[/]", password=True)
                 if client.login_user(username, password):
-                    if clear_screen:
-                        os.system("clear")
+                    os.system("clear")
                     print_centered_banner("CipherShare", subtitle=f"Welcome, {username} 👋")
                     console.print(Panel(Text("✔ Successfully logged in!", style="bold green"),
                                         title="Login Successful", border_style="green", box=box.HEAVY))
                     input("\nPress Enter to continue...")
 
             elif choice == "3":
-                if clear_screen:
-                    os.system("clear")
+                os.system("clear")
                 print_centered_banner("Goodbye!", style="bold red")
                 console.print(Rule(style="red"))
                 console.print("[yellow]Thank you for using CipherShare. Stay safe and encrypted![/]")
