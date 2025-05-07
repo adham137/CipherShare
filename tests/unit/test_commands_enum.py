@@ -23,7 +23,6 @@ def test_from_string_valid_cases():
     name = "test_from_string_valid_cases"
     print_header(name)
 
-    # case-insensitive matching
     assert Commands.from_string("register_user") is Commands.REGISTER_USER
     assert Commands.from_string("Login_User")  is Commands.LOGIN_USER
     assert Commands.from_string("VERIFY_SESSION") is Commands.VERIFY_SESSION

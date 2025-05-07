@@ -18,8 +18,7 @@ def print_footer(name, passed=True):
     mark = f"{GREEN}✔{RESET}"
     print(f"{mark} {GREEN}{name} passed{RESET}" if passed else f"{mark} {name} failed")
 
-# ─── SHA256 Hashing Tests ────────────────────────────────────────────────
-
+# ─── Tests ────────────────────────────────────────────────
 def test_hash_and_verify_password_success():
     print_header("test_hash_and_verify_password_success")
     pw = "SuperSecret123!"
@@ -42,8 +41,6 @@ def test_verify_password_failure():
     assert not crypto_utils.verify_password_256("WrongOne", hashed, salt)
     print_footer("test_verify_password_failure")
 
-# ─── Argon2 Tests ────────────────────────────────────────────────────────
-
 def test_argon2_password_hash_and_verify_success():
     print_header("test_argon2_password_hash_and_verify_success")
     pw = "ArgonTest123!"
@@ -57,8 +54,6 @@ def test_argon2_password_verify_failure():
     assert not crypto_utils.verify_password_argon2("WrongPassword", hashed, salt)
     print_footer("test_argon2_password_verify_failure")
 
-# ─── Session ID Test ─────────────────────────────────────────────────────
-
 def test_generate_session_id_format_and_uniqueness():
     print_header("test_generate_session_id_format_and_uniqueness")
     sid1 = crypto_utils.generate_session_id()
@@ -67,8 +62,6 @@ def test_generate_session_id_format_and_uniqueness():
     assert re.fullmatch(r"[0-9a-f]{64}", sid2)
     assert sid1 != sid2
     print_footer("test_generate_session_id_format_and_uniqueness")
-
-# ─── Key Derivation and AES Encryption ───────────────────────────────────
 
 def test_derive_key_from_password():
     print_header("test_derive_key_from_password")
@@ -87,8 +80,6 @@ def test_encrypt_decrypt_data():
     decrypted = crypto_utils.decrypt_data(encrypted, fake_hash)
     assert decrypted == data
     print_footer("test_encrypt_decrypt_data")
-
-# ─── Hashing Test ────────────────────────────────────────────────────────
 
 def test_compute_hash():
     print_header("test_compute_hash")
