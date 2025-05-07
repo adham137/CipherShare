@@ -1,4 +1,3 @@
-```markdown
 # CipherShare - Secure P2P File Sharing
 
 **Course**: CSE451 Computer and Network Security  
