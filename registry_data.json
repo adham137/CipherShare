@@ -7,6 +7,14 @@
         "adham": [
             "127.0.0.1",
             50038
+        ],
+        "laila": [
+            "127.0.0.1",
+            58755
+        ],
+        "adham2": [
+            "127.0.0.1",
+            58692
         ]
     },
     "user_credentials": {
@@ -19,6 +27,16 @@
             "hashed_password": "026e78eede0d885b2524d76391880048643dc9d02478b1e6ca56cc8325628de1",
             "salt": "2e4829650f57d21da759d1da38b1c7e7",
             "key": "d0152fee1adcfcb63f75b8784d9d33a29e1b018642c08764fab7f40f146b7d7b"
+        },
+        "laila": {
+            "hashed_password": "79a5f22c4211ce34b9a96eb70c2b46b4a682e27c8c3a7a815abee3c70363f40c",
+            "salt": "2570091f067d8a81917cdb3108d1f74a",
+            "key": "d2ff06ec1bbd201098086fee379ef161abde0ec06710eeaa2037fb2cf4d38125"
+        },
+        "adham2": {
+            "hashed_password": "d3b982bf84b4ac2c0b724a5352683436a52b62a961c1be1563af3254076573b9",
+            "salt": "1f7cfc335653f9c8a5ff395c595efc56",
+            "key": "fcc93ffaa06ed6cdf52b4e78764cd0942d68a8dbc16b11a5d1c08e954b2b256b"
         }
     },
     "shared_files": {},
