@@ -1,213 +1,239 @@
 import os
-import socket
-from colorama import Fore, Style
-# from src.client.fileshare_client import FileShareClient # Avoid circular import
+import shutil
+from pyfiglet import Figlet
+from rich.console import Console
+from rich.rule import Rule
+from rich.panel import Panel
+from rich.prompt import Prompt
+from rich.text import Text
+from rich import box
+from rich.table import Table
 
-# Assuming client object is passed to client_ui function
+console = Console()
+figlet = Figlet(font='slant')
 
-def client_ui(client):
+
+def print_centered_banner(text, subtitle=None, style="bold cyan", subtitle_style="bold magenta"):
+    term_width = shutil.get_terminal_size().columns
+    ascii_banner = figlet.renderText(text)
+    centered_banner = "\n".join(line.center(term_width) for line in ascii_banner.splitlines())
+    console.print(centered_banner, style=style)
+    if subtitle:
+        console.print(subtitle.center(term_width), style=subtitle_style)
+
+
+def client_ui(client, clear_screen=True):
     while True:
-        print(Fore.CYAN + Style.BRIGHT + "\n--- CipherShare Client ---" + Style.RESET_ALL)
-        if not client.username:
-            print(Fore.YELLOW + "1. Register")
-            print(Fore.YELLOW + "2. Login")
-            print(Fore.YELLOW + "3. Exit" + Style.RESET_ALL)
-            choice = input(Fore.GREEN + "Enter choice: " + Style.RESET_ALL)
+        if clear_screen:
+            os.system("clear")
 
-            if choice == '1':
-                username = input(Fore.GREEN + "Enter username: " + Style.RESET_ALL)
-                password = input(Fore.GREEN + "Enter password: " + Style.RESET_ALL)
-                client.register_user(username, password)
-            elif choice == '2':
-                username = input(Fore.GREEN + "Enter username: " + Style.RESET_ALL)
-                password = input(Fore.GREEN + "Enter password: " + Style.RESET_ALL)
-                client.login_user(username, password)
-            elif choice == '3':
-                break
-            else:
-                print(Fore.RED + "Invalid choice." + Style.RESET_ALL)
+        if client.username:
+            print_centered_banner("CipherShare", subtitle=f"Welcome, {client.username} 👋")
         else:
-            print(Fore.YELLOW + "4. List Peers")
-            print(Fore.YELLOW + "5. Upload File")
-            print(Fore.YELLOW + "6. List Available Files")
-            print(Fore.YELLOW + "7. Download File")
-            print(Fore.YELLOW + "8. Share File") # New Option
-            print(Fore.YELLOW + "9. Revoke Access") # New Option
-            print(Fore.YELLOW + "10. Logout")
-            print(Fore.YELLOW + "11. Exit" + Style.RESET_ALL)
+            print_centered_banner("CipherShare")
 
-            choice = input(Fore.GREEN + "Enter choice: " + Style.RESET_ALL)
+        if not client.username:
+            menu_text = Text()
+            menu_text.append(" Register – Create a new account\n")
+            menu_text.append(" Login – Access your account\n")
+            menu_text.append(" Exit – Quit the client")
+            console.print(Panel(menu_text, title="Main Menu", border_style="magenta", box=box.ROUNDED))
+            choice = Prompt.ask("[green]Select an option[/] [1/2/3]", choices=["1", "2", "3"], default="1")
+
+            if choice == "1":
+                username = Prompt.ask("[green]Enter username[/]")
+                password = Prompt.ask("[green]Enter password[/]", password=True)
+                client.register_user(username, password)
+
+            elif choice == "2":
+                username = Prompt.ask("[green]Enter username[/]")
+                password = Prompt.ask("[green]Enter password[/]", password=True)
+                if client.login_user(username, password):
+                    if clear_screen:
+                        os.system("clear")
+                    print_centered_banner("CipherShare", subtitle=f"Welcome, {username} 👋")
+                    console.print(Panel(Text("✔ Successfully logged in!", style="bold green"),
+                                        title="Login Successful", border_style="green", box=box.HEAVY))
+                    input("\nPress Enter to continue...")
+
+            elif choice == "3":
+                if clear_screen:
+                    os.system("clear")
+                print_centered_banner("Goodbye!", style="bold red")
+                console.print(Rule(style="red"))
+                console.print("[yellow]Thank you for using CipherShare. Stay safe and encrypted![/]")
+                console.print(Rule(style="red"))
+                break
+
+        else:
+            # 🔐 Advanced Styled User Menu
+            menu_table = Table(
+                title="[bold underline cyan]🔐 User Menu",
+                title_justify="center",
+                box=box.ROUNDED,
+                border_style="bright_magenta",
+                show_header=True,
+                header_style="bold white on black",
+            )
+
+            menu_table.add_column("Option", justify="center", style="bold yellow", width=10)
+            menu_table.add_column("Description", justify="left", style="bold green")
+
+            menu_table.add_row("4️⃣", "List Peers")
+            menu_table.add_row("5️⃣", "Upload File")
+            menu_table.add_row("6️⃣", "List Available Files")
+            menu_table.add_row("7️⃣", "Download File")
+            menu_table.add_row("8️⃣", "Share File")
+            menu_table.add_row("9️⃣", "Revoke Access")
+            menu_table.add_row("🔟", "Logout")
+            menu_table.add_row("1️⃣1️⃣", "Exit")
+
+            console.print(menu_table)
+            choice = Prompt.ask("[cyan bold]Enter your choice[/]", choices=[str(i) for i in range(4, 12)])
 
             if choice == '4':
                 peers = client.get_peers()
                 if peers:
-                    print(Fore.BLUE + "Available Peers (excluding self):" + Style.RESET_ALL)
+                    console.print("\n[bold blue]Available Peers (excluding self):[/]")
                     for peer in peers:
-                        print(Fore.BLUE + str(peer) + Style.RESET_ALL)
+                        console.print(f"[blue]{peer}[/]")
                 else:
-                    print(Fore.YELLOW + "No other peers found." + Style.RESET_ALL)
+                    console.print("[yellow]No other peers found.[/]")
+                input("\nPress Enter to continue...")
 
             elif choice == '5':
-                filepath = input(Fore.GREEN + "Enter full file path to upload: " + Style.RESET_ALL)
+                filepath = Prompt.ask("[green]Enter full file path to upload[/]")
                 if not os.path.isfile(filepath):
-                     print(Fore.RED + f"Error: File not found at '{filepath}'" + Style.RESET_ALL)
-                     continue
-                client.upload_file(filepath) # Upload to own peer
+                    console.print(f"[red]Error: File not found at '{filepath}'[/]")
+                    continue
+                client.upload_file(filepath)
 
             elif choice == '6':
                 files = client.get_files_from_registry()
                 if files:
-                    print(Fore.BLUE + "Available Files on the Network:" + Style.RESET_ALL)
-                    # Sort by file_id for consistent display
-                    sorted_file_ids = sorted(files.keys(), key=int)
-                    for file_id in sorted_file_ids:
+                    console.print("[bold blue]Available Files on the Network:[/]")
+                    for file_id in sorted(files.keys(), key=int):
                         file_info = files[file_id]
-                        # Display owner and allowed users
-                        allowed_users = file_info.get('allowed_users', [])
-                        print(Fore.BLUE + f"ID: {file_id} | Filename: {file_info['filename']} | Owner: {file_info['owner']} | Shared With: {', '.join(allowed_users)}" + Style.RESET_ALL)
+                        allowed = ", ".join(file_info.get("allowed_users", []))
+                        console.print(f"[blue]ID: {file_id} | Filename: {file_info['filename']} | Owner: {file_info['owner']} | Shared With: {allowed}[/]")
                 else:
-                    print(Fore.YELLOW + "No files found in the registry." + Style.RESET_ALL)
+                    console.print("[yellow]No files found in the registry.[/]")
+                input("\nPress Enter to continue...")
 
             elif choice == '7':
                 files = client.get_files_from_registry()
                 if not files:
-                    print(Fore.YELLOW + "No files available to download. Try listing files first (option 6)." + Style.RESET_ALL)
+                    console.print("[yellow]No files available to download. Try listing files first (option 6).[/]")
                     continue
 
-                # Display files again for convenience
-                print(Fore.BLUE + "Available Files on the Network:" + Style.RESET_ALL)
-                sorted_file_ids = sorted(files.keys(), key=int)
-                for file_id in sorted_file_ids:
-                    file_info = files[file_id]
-                    allowed_users = file_info.get('allowed_users', [])
-                    print(Fore.BLUE + f"ID: {file_id} | Filename: {file_info['filename']} | Owner: {file_info['owner']} | Shared With: {', '.join(allowed_users)}" + Style.RESET_ALL)
+                for file_id in sorted(files.keys(), key=int):
+                    info = files[file_id]
+                    allowed = ", ".join(info.get("allowed_users", []))
+                    console.print(f"[blue]ID: {file_id} | Filename: {info['filename']} | Owner: {info['owner']} | Shared With: {allowed}[/]")
 
-                file_id_str = input(Fore.GREEN + "Enter file ID to download: " + Style.RESET_ALL)
-
-                # Validate file_id and check if file exists in the list from registry
-                if file_id_str not in files:
-                    print(Fore.RED + f"Error: Invalid file ID '{file_id_str}'. File not found in the list." + Style.RESET_ALL)
+                file_id = Prompt.ask("[green]Enter file ID to download[/]")
+                if file_id not in files:
+                    console.print(f"[red]Error: File ID '{file_id}' not found.[/]")
                     continue
 
-                file_info_to_download = files[file_id_str]
-                owner_addr = file_info_to_download.get("owner_address")
-                filename = file_info_to_download.get("filename")
-                expected_hash = file_info_to_download.get("file_hash")
+                info = files[file_id]
+                owner_addr = info.get("owner_address")
+                filename = info.get("filename")
+                file_hash = info.get("file_hash")
 
-                if not owner_addr or not filename or not expected_hash:
-                     print(Fore.RED + f"Error: Missing file information for ID {file_id_str} from registry." + Style.RESET_ALL)
-                     continue
-
-                destination_path = input(Fore.GREEN + "Enter destination directory path (e.g., ./downloads): " + Style.RESET_ALL)
-                if not os.path.isdir(destination_path):
-                     create_dest = input(Fore.YELLOW + f"Directory '{destination_path}' does not exist. Create it? (y/n): " + Style.RESET_ALL)
-                     if create_dest.lower() == 'y':
-                         try:
-                             os.makedirs(destination_path)
-                             print(Fore.GREEN + f"Created directory: {destination_path}" + Style.RESET_ALL)
-                         except OSError as e:
-                             print(Fore.RED + f"Error creating directory: {e}" + Style.RESET_ALL)
-                             continue
-                     else:
-                         print(Fore.YELLOW + "Download cancelled." + Style.RESET_ALL)
-                         continue
-
-                # Call download_file which now handles access check and key retrieval internally
-                client.download_file(file_id_str, destination_path, owner_addr, filename, expected_hash)
-
-
-            elif choice == '8': # Share File
-                files = client.get_files_from_registry()
-                if not files:
-                    print(Fore.YELLOW + "No files found in the registry to share." + Style.RESET_ALL)
+                if not all([owner_addr, filename, file_hash]):
+                    console.print(f"[red]Error: Incomplete file info for ID {file_id}[/]")
                     continue
 
-                print(Fore.BLUE + "Your Files (as owner):" + Style.RESET_ALL)
-                owned_files = {fid: info for fid, info in files.items() if info.get("owner") == client.username}
-                if not owned_files:
-                    print(Fore.YELLOW + "You do not own any files to share." + Style.RESET_ALL)
-                    continue
-
-                sorted_owned_file_ids = sorted(owned_files.keys(), key=int)
-                for file_id in sorted_owned_file_ids:
-                    file_info = owned_files[file_id]
-                    allowed_users = file_info.get('allowed_users', [])
-                    print(Fore.BLUE + f"ID: {file_id} | Filename: {file_info['filename']} | Shared With: {', '.join(allowed_users)}" + Style.RESET_ALL)
-
-                file_id_to_share = input(Fore.GREEN + "Enter the ID of the file you want to share: " + Style.RESET_ALL)
-
-                if file_id_to_share not in owned_files:
-                    print(Fore.RED + f"Error: Invalid file ID '{file_id_to_share}' or you do not own this file." + Style.RESET_ALL)
-                    continue
-
-                target_username = input(Fore.GREEN + "Enter the username to share with: " + Style.RESET_ALL)
-
-                if target_username == client.username:
-                    print(Fore.YELLOW + "Cannot share a file with yourself." + Style.RESET_ALL)
-                    continue
-
-                client.share_file(file_id_to_share, target_username)
-
-            elif choice == '9': # Revoke Access
-                files = client.get_files_from_registry()
-                if not files:
-                    print(Fore.YELLOW + "No files found in the registry." + Style.RESET_ALL)
-                    continue
-
-                print(Fore.BLUE + "Your Files (as owner) for Revoking Access:" + Style.RESET_ALL)
-                owned_files = {fid: info for fid, info in files.items() if info.get("owner") == client.username}
-                if not owned_files:
-                    print(Fore.YELLOW + "You do not own any files to revoke access from." + Style.RESET_ALL)
-                    continue
-
-                sorted_owned_file_ids = sorted(owned_files.keys(), key=int)
-                for file_id in sorted_owned_file_ids:
-                    file_info = owned_files[file_id]
-                    allowed_users = file_info.get('allowed_users', [])
-                    print(Fore.BLUE + f"ID: {file_id} | Filename: {file_info['filename']} | Shared With: {', '.join(allowed_users)}" + Style.RESET_ALL)
-
-                file_id_to_revoke = input(Fore.GREEN + "Enter the ID of the file to revoke access from: " + Style.RESET_ALL)
-
-                if file_id_to_revoke not in owned_files:
-                    print(Fore.RED + f"Error: Invalid file ID '{file_id_to_revoke}' or you do not own this file." + Style.RESET_ALL)
-                    continue
-
-                file_info_to_revoke = owned_files[file_id_to_revoke]
-                allowed_users = file_info_to_revoke.get('allowed_users', [])
-
-                if len(allowed_users) <= 1: # Only owner has access
-                     print(Fore.YELLOW + "No other users have access to this file to revoke." + Style.RESET_ALL)
-                     continue
-
-                print(Fore.BLUE + "Users with Access (excluding owner):" + Style.RESET_ALL)
-                users_to_revoke = [u for u in allowed_users if u != client.username]
-                if not users_to_revoke:
-                     print(Fore.YELLOW + "No other users have access to this file to revoke." + Style.RESET_ALL)
-                     continue
-
-                for i, user in enumerate(users_to_revoke):
-                    print(Fore.BLUE + f"{i}: {user}" + Style.RESET_ALL)
-
-                user_index_str = input(Fore.GREEN + f"Enter the index of the user to revoke access for (0 to {len(users_to_revoke)-1}): " + Style.RESET_ALL)
-                try:
-                    user_index = int(user_index_str)
-                    if 0 <= user_index < len(users_to_revoke):
-                        target_username_revoke = users_to_revoke[user_index]
-                        client.revoke_access(file_id_to_revoke, target_username_revoke)
+                dest_path = Prompt.ask("[green]Enter destination folder (e.g. ./downloads)[/]")
+                if not os.path.isdir(dest_path):
+                    create = Prompt.ask(f"[yellow]Directory '{dest_path}' does not exist. Create it? (y/n)[/]", choices=["y", "n"])
+                    if create == 'y':
+                        try:
+                            os.makedirs(dest_path)
+                            console.print(f"[green]Directory created: {dest_path}[/]")
+                        except Exception as e:
+                            console.print(f"[red]Error: {e}[/]")
+                            continue
                     else:
-                        print(Fore.RED + "Invalid user index." + Style.RESET_ALL)
-                except ValueError:
-                    print(Fore.RED + "Invalid input. Please enter a number." + Style.RESET_ALL)
+                        continue
 
+                client.download_file(file_id, dest_path, owner_addr, filename, file_hash)
 
-            elif choice == '10': # Logout
+            elif choice == '8':
+                files = client.get_files_from_registry()
+                owned_files = {fid: info for fid, info in files.items() if info.get("owner") == client.username}
+
+                if not owned_files:
+                    console.print("[yellow]You don’t own any files to share.[/]")
+                    continue
+
+                for file_id in sorted(owned_files.keys(), key=int):
+                    info = owned_files[file_id]
+                    allowed = ", ".join(info.get("allowed_users", []))
+                    console.print(f"[blue]ID: {file_id} | Filename: {info['filename']} | Shared With: {allowed}[/]")
+
+                file_id = Prompt.ask("[green]Enter the ID of the file to share[/]")
+                if file_id not in owned_files:
+                    console.print("[red]Invalid ID or not your file.[/]")
+                    continue
+
+                target_user = Prompt.ask("[green]Enter username to share with[/]")
+                if target_user == client.username:
+                    console.print("[yellow]You can't share a file with yourself.[/]")
+                    continue
+
+                client.share_file(file_id, target_user)
+
+            elif choice == '9':
+                files = client.get_files_from_registry()
+                owned_files = {fid: info for fid, info in files.items() if info.get("owner") == client.username}
+
+                if not owned_files:
+                    console.print("[yellow]No owned files to revoke access from.[/]")
+                    continue
+
+                for file_id in sorted(owned_files.keys(), key=int):
+                    info = owned_files[file_id]
+                    allowed = info.get("allowed_users", [])
+                    console.print(f"[blue]ID: {file_id} | Filename: {info['filename']} | Shared With: {', '.join(allowed)}[/]")
+
+                file_id = Prompt.ask("[green]Enter the ID of the file to revoke access[/]")
+                if file_id not in owned_files:
+                    console.print("[red]Invalid ID or not your file.[/]")
+                    continue
+
+                users = [u for u in owned_files[file_id]["allowed_users"] if u != client.username]
+                if not users:
+                    console.print("[yellow]No users to revoke access from.[/]")
+                    continue
+
+                table = Table(title="Users with Access", box=box.MINIMAL_DOUBLE_HEAD)
+                table.add_column("Index", style="yellow")
+                table.add_column("Username", style="cyan")
+                for i, user in enumerate(users):
+                    table.add_row(str(i), user)
+                console.print(table)
+
+                idx = Prompt.ask(f"[green]Enter user index to revoke (0–{len(users)-1})[/]")
+                try:
+                    idx = int(idx)
+                    if 0 <= idx < len(users):
+                        client.revoke_access(file_id, users[idx])
+                    else:
+                        console.print("[red]Invalid index.[/]")
+                except:
+                    console.print("[red]Please enter a number.[/]")
+
+            elif choice == '10':
                 client.username = None
                 client.session_id = None
-                client.key = None # Clear the user's key on logout
-                print(Fore.GREEN + "Client: Logged out." + Style.RESET_ALL)
-            elif choice == '11': # Exit
-                print(Fore.YELLOW + "Exiting CipherShare Client." + Style.RESET_ALL)
+                client.key = None
+                console.print("[green]Logged out successfully.[/]")
+            elif choice == '11':
+                os.system('clear')
+                print_centered_banner("Goodbye!", style="bold red")
+                console.print(Rule(style="red"))
+                console.print("[yellow]Thank you for using CipherShare. Stay safe and encrypted![/]")
+                console.print(Rule(style="red"))
                 break
-            else:
-                print(Fore.RED + "Invalid choice." + Style.RESET_ALL)
-
