@@ -2,28 +2,31 @@ from enum import Enum, auto
 
 class Commands(Enum):
     """Enum defining the commands used in the CipherShare protocol."""
-    # Registry Commands
+# Registry Commands
     REGISTER_USER = auto()
     LOGIN_USER = auto()
     VERIFY_SESSION = auto()
-    REGISTER_PEER = auto()
+    REGISTER_PEER = auto() 
     GET_PEERS = auto()
+
     REGISTER_FILE = auto()
-    GET_FILES = auto()
+    GET_FILES = auto() # get files from Registry (accessible to user)
     REQUEST_KEY = auto()
-    
+
     # commands for access control
     SHARE_FILE = auto()
     REVOKE_ACCESS = auto()
-    CHECK_ACCESS = auto() 
+    CHECK_ACCESS = auto()
 
-    # client-to-Peer Commands
+    # client-to-peer Commands
     UPLOAD = auto()
     DOWNLOAD = auto()
+    GET_PEER_FILES = auto() # New command to ask a peer what files it has
 
-    # Control Signals
+    # control Signals
     DONE = auto()
     ERROR = auto()
+
 
     # string -> enum
     @classmethod

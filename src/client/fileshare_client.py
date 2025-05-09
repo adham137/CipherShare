@@ -58,6 +58,67 @@ class FileShareClient:
             return {"status": "ERROR", "message": f"Registry communication error: {e}"}
         finally:
             sock.close()
+    def get_files_from_peers(self):
+        """Fetches file lists from all active peers."""
+        if not self.session_id:
+            print(Fore.RED + "Client: Not logged in. Cannot discover files from peers." + Style.RESET_ALL)
+            return {}
+
+        print(Fore.YELLOW + "Client: Discovering files from active peers..." + Style.RESET_ALL)
+        active_peers = self.get_peers() # Get active peers from the registry
+        all_peer_files = {} # {peer_address: [{filename, size}, ...]}
+
+        if not active_peers:
+            print(Fore.YELLOW + "Client: No other active peers found to query." + Style.RESET_ALL)
+            return all_peer_files
+
+        for peer_addr in active_peers:
+            print(f"Client: Querying peer {peer_addr} for file list...")
+            sock = self._connect_socket(peer_addr[0], peer_addr[1])
+            if not sock:
+                print(Fore.RED + f"Client: Could not connect to peer {peer_addr}." + Style.RESET_ALL)
+                continue
+
+            try:
+                # Send the GET_PEER_FILES command
+                command_msg = f"{str(Commands.GET_PEER_FILES)}\n"
+                sock.sendall(command_msg.encode('utf-8'))
+
+
+                response_data = b''
+                # Set a shorter timeout for receiving from peer after sending command
+                sock.settimeout(10) # e.g., 10 seconds to get the file list response
+
+                while True:
+                    chunk = sock.recv(4096) # Read in chunks
+                    if not chunk:
+                        break # Connection closed by peer
+                    response_data += chunk
+
+                if not response_data:
+                    print(Fore.RED + f"Client: No response received from peer {peer_addr}." + Style.RESET_ALL)
+                    continue
+
+                try:
+                    response = json.loads(response_data.decode('utf-8'))
+                    if response.get("status") == "OK":
+                        all_peer_files[peer_addr] = response.get("files", [])
+                        print(Fore.GREEN + f"Client: Successfully received file list from {peer_addr}." + Style.RESET_ALL)
+                    else:
+                         print(Fore.RED + f"Client: Error response from peer {peer_addr}: {response.get('message', 'Unknown error')}" + Style.RESET_ALL)
+
+                except json.JSONDecodeError:
+                    print(Fore.RED + f"Client: Error decoding JSON response from peer {peer_addr}." + Style.RESET_ALL)
+                except Exception as response_e:
+                    print(Fore.RED + f"Client: Error processing response from peer {peer_addr}: {response_e}" + Style.RESET_ALL)
+
+
+            except Exception as e:
+                print(Fore.RED + f"Client: Error communicating with peer {peer_addr}: {e}" + Style.RESET_ALL)
+            finally:
+                sock.close()
+
+        return all_peer_files
 
     def register_user(self, username, password):
         if not self.peer_address:
@@ -95,7 +156,10 @@ class FileShareClient:
             self.session_id = None
             self.key = None
             return False
-
+    def logout(self):
+        self.username = None
+        self.session_id = None
+        self.key = None
     def get_peers(self):
         if not self.session_id:
             print(Fore.RED + "Client: Not logged in. Cannot get peers." + Style.RESET_ALL)

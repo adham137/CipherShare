@@ -7,6 +7,14 @@
         "adham": [
             "127.0.0.1",
             50038
+        ],
+        "a1": [
+            "127.0.0.1",
+            51559
+        ],
+        "a2": [
+            "127.0.0.1",
+            51531
         ]
     },
     "user_credentials": {
@@ -19,8 +27,32 @@
             "hashed_password": "026e78eede0d885b2524d76391880048643dc9d02478b1e6ca56cc8325628de1",
             "salt": "2e4829650f57d21da759d1da38b1c7e7",
             "key": "d0152fee1adcfcb63f75b8784d9d33a29e1b018642c08764fab7f40f146b7d7b"
+        },
+        "a1": {
+            "hashed_password": "8331304a676b667a7847c036a466ff8972d295237804f32dae259397ed41ba5c",
+            "salt": "7ae9ca6c2fe4faaca400a49b171dcdc5",
+            "key": "5c08767f979aadde705bb9eaccbafd4e5f725920045633e9d82335650b8c2c7b"
+        },
+        "a2": {
+            "hashed_password": "d5a9c626f44ebc61d6cda5563f8c3f87b7d057018d95df74213c95f15d291433",
+            "salt": "cca24e3daf9614ab176116f53db13f1e",
+            "key": "60b4347936ff4fbc7f8008352ccf4a064e1bee45831b9d057735b26036bd8719"
         }
     },
-    "shared_files": {},
-    "file_id_counter": 0
+    "shared_files": {
+        "0": {
+            "filename": "Test_image.png",
+            "owner": "a1",
+            "owner_address": [
+                "127.0.0.1",
+                61250
+            ],
+            "file_hash": "20509d481f3478c108545942a03837ddb5ca84b76df2a4b87ec4457e504c10aa",
+            "allowed_users": [
+                "a1",
+                "a2"
+            ]
+        }
+    },
+    "file_id_counter": 1
 }

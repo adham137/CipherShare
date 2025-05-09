@@ -105,6 +105,10 @@ class FileSharePeer:
                              file_id_line += chunk
                         handler_args['file_id_str'] = file_id_line.decode('utf-8').strip()
 
+                    elif command == Commands.GET_PEER_FILES:
+                        # for GET_PEER_FILES, the command line is the entire request for now
+                        pass 
+
                     # Execute the command using the strategy
                     print(f"Peer: Executing handler for command {command} with args: { {k:v for k,v in handler_args.items() if k!='client_socket'} }")
                     handler.execute(**handler_args)

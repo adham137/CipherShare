@@ -97,24 +97,66 @@ def client_ui(client):
                     console.print("[yellow]No other peers found.[/]")
                 input("\nPress Enter to continue...")
 
-            elif choice == '5':
-                filepath = Prompt.ask("[green]Enter full file path to upload[/]")
-                if not os.path.isfile(filepath):
-                    console.print(f"[red]Error: File not found at '{filepath}'[/]")
-                    continue
-                client.upload_file(filepath)
+            # elif choice == '5':
+            #     filepath = Prompt.ask("[green]Enter full file path to upload[/]")
+            #     if not os.path.isfile(filepath):
+            #         console.print(f"[red]Error: File not found at '{filepath}'[/]")
+            #         continue
+            #     client.upload_file(filepath)
+
+            # elif choice == '6':
+            #     files = client.get_files_from_registry()
+            #     # files = client.get_files_from_peers()
+            #     if files:
+            #         console.print("[bold blue]Available Files on the Network:[/]")
+            #         for file_id in sorted(files.keys(), key=int):
+            #             file_info = files[file_id]
+            #             allowed = ", ".join(file_info.get("allowed_users", []))
+            #             console.print(f"[blue]ID: {file_id} | Filename: {file_info['filename']} | Owner: {file_info['owner']} | Shared With: {allowed}[/]")
+            #     else:
+            #         console.print("[yellow]No files found in the registry.[/]")
+            #     input("\nPress Enter to continue...")
 
             elif choice == '6':
-                files = client.get_files_from_registry()
-                if files:
-                    console.print("[bold blue]Available Files on the Network:[/]")
-                    for file_id in sorted(files.keys(), key=int):
-                        file_info = files[file_id]
-                        allowed = ", ".join(file_info.get("allowed_users", []))
-                        console.print(f"[blue]ID: {file_id} | Filename: {file_info['filename']} | Owner: {file_info['owner']} | Shared With: {allowed}[/]")
+                # new functionality to discover files from peers
+                # this replaces the old get_files_from_registry call for listing
+                all_peer_files = client.get_files_from_peers()
+
+                if all_peer_files:
+                    console.print("\n[bold blue]Files Available on Peers:[/]")
+                    for peer_addr, files_list in all_peer_files.items():
+                        console.print(f"[bold yellow]Files on Peer {peer_addr}:[/]")
+                        if files_list:
+                            peer_files_table = Table(box=box.MINIMAL_DOUBLE_HEAD)
+                            peer_files_table.add_column("Filename", style="cyan")
+                            peer_files_table.add_column("Size", style="magenta")
+                            for file_info in files_list:
+                                peer_files_table.add_row(file_info.get("filename", "N/A"), str(file_info.get("size", "N/A")))
+                            console.print(peer_files_table)
+                        else:
+                            console.print("[italic gray]  No files shared by this peer.[/italic gray]")
                 else:
-                    console.print("[yellow]No files found in the registry.[/]")
+                    console.print("[yellow]No files found on any active peers.[/]")
+
+                console.print("\n[bold blue]Files you can download (from Registry):[/]")
+                accessible_files_from_registry = client.get_files_from_registry()
+                if accessible_files_from_registry:
+                     registry_files_table = Table(box=box.MINIMAL_DOUBLE_HEAD)
+                     registry_files_table.add_column("ID", style="yellow")
+                     registry_files_table.add_column("Filename", style="cyan")
+                     registry_files_table.add_column("Owner", style="green")
+                     registry_files_table.add_column("Shared With", style="magenta")
+                     for file_id in sorted(accessible_files_from_registry.keys(), key=int):
+                        file_info = accessible_files_from_registry[file_id]
+                        allowed = ", ".join(file_info.get("allowed_users", []))
+                        registry_files_table.add_row(str(file_id), file_info.get('filename', 'N/A'), file_info.get('owner', 'N/A'), allowed)
+                     console.print(registry_files_table)
+                else:
+                    console.print("[yellow]No files registered in the registry that you can access.[/]")
+
+
                 input("\nPress Enter to continue...")
+
 
             elif choice == '7':
                 files = client.get_files_from_registry()

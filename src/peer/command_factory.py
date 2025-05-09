@@ -3,7 +3,7 @@ from src.utils.commands_enum import Commands
 from .strategies.command_strategy import CommandStrategy
 from .strategies.upload_strategy import UploadStrategy
 from .strategies.download_strategy import DownloadStrategy
-
+from.strategies.get_peer_files_strategy import GetPeerFilesStrategy
 
 class CommandFactory:
     """Factory class to create command strategy instances."""
@@ -11,7 +11,7 @@ class CommandFactory:
     _strategies = {
         Commands.UPLOAD: UploadStrategy(),
         Commands.DOWNLOAD: DownloadStrategy(),
-        # Add mappings for other commands here
+        Commands.GET_PEER_FILES: GetPeerFilesStrategy()
        
     }
 
